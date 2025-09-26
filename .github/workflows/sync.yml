@@ -1,0 +1,40 @@
+name: Sync builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version
+        required: true
+
+jobs:
+  index:
+    name: Sync Index
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Checkout index branch
+        uses: actions/checkout@v5
+        with:
+          ref: index
+          path: index
+          fetch-depth: 2
+
+      - name: Update releases.json for ${{ github.event.inputs.version }}
+        run: |
+          python3 scripts/gen_releases_json.py > index/releases.json
+
+      - name: Commit and push
+        run: |
+          git config --local user.name "eric"
+          git config --local user.email "ericjohnson00456@gmail.com"
+          git add releases.json
+          git commit -m "Update releases.json for version ${{ github.event.inputs.version }}" || echo "No changes to commit"
+          git push origin HEAD:index
+        working-directory: index
