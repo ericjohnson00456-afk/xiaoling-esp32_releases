@@ -28,7 +28,7 @@ jobs:
 
       - name: Update releases.json for ${{ github.event.inputs.version }}
         run: |
-          python3 scripts/gen_releases_json.py > index/releases.json
+          python3 scripts/gen_releases_json.py --json > index/releases.json
 
       - name: Commit and push
         run: |
@@ -38,3 +38,39 @@ jobs:
           git commit -m "Update releases.json for version ${{ github.event.inputs.version }}" || echo "No changes to commit"
           git push origin HEAD:index
         working-directory: index
+
+  blobs:
+    name: Sync Blobs
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Checkout blobs branch
+        uses: actions/checkout@v5
+        with:
+          ref: master
+          path: blobs
+
+      - name: Prepare blobs branch
+        run: |
+          git checkout --orphan blobs
+          git rm -rf .
+        working-directory: blobs
+
+      - name: Fetch blobs for ${{ github.event.inputs.version }}
+        run: |
+          python3 scripts/gen_releases_json.py --urls ${{ github.event.inputs.version }} | xargs -n 1 wget -q -P blobs/
+
+      - name: Commit and push
+        run: |
+          git config --local user.name "eric"
+          git config --local user.email "ericjohnson00456@gmail.com"
+          git add .
+          git commit -m "Update blobs for version ${{ github.event.inputs.version }}"
+          git push origin HEAD:refs/tags/${{ github.event.inputs.version }} --force
+        working-directory: blobs
